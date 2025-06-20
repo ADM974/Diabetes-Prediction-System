@@ -23,10 +23,19 @@ def load_model():
         if not os.path.exists("diabetes.csv"):
             urllib.request.urlretrieve(dataset_url, "diabetes.csv")
         
-        # Load diabetes dataset
-        df = pd.read_csv("diabetes.csv", header=None)
-        df.columns = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 
-                     'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
+        # Load diabetes dataset with proper column names
+        column_names = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 
+                       'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
+        
+        # Load dataset with column names
+        df = pd.read_csv("diabetes.csv", header=None, names=column_names)
+        
+        # Clean data: replace 0 values in certain columns with NaN
+        zero_not_accepted = ['Glucose', 'BloodPressure', 'SkinThickness', 'BMI', 'Insulin']
+        for column in zero_not_accepted:
+            df[column] = df[column].replace(0, np.NaN)
+            mean = int(df[column].mean(skipna=True))
+            df[column] = df[column].replace(np.NaN, mean)
         
         # Prepare data
         X = df.drop('Outcome', axis=1)
@@ -36,7 +45,7 @@ def load_model():
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
         # Train model
-        model = LogisticRegression()
+        model = LogisticRegression(max_iter=1000)
         model.fit(X_train, y_train)
         
         # Calculate accuracy
@@ -50,5 +59,3 @@ def load_model():
 
 # Load model when app starts
 model, accuracy = load_model()
-
-{{ ... }}
