@@ -61,8 +61,12 @@ async def load_model():
             # Clean data: replace 0 values in certain columns with mean
             zero_not_accepted = ['Glucose', 'BloodPressure', 'SkinThickness', 'BMI', 'Insulin']
             for column in zero_not_accepted:
-                mean = df[column].replace(0, pd.NA).mean(skipna=True)
-                df[column] = df[column].replace(0, mean)
+                # Replace 0 with NaN first
+                df[column] = df[column].replace(0, np.nan)
+                # Calculate mean
+                mean = df[column].mean(skipna=True)
+                # Fill NaN with mean
+                df[column] = df[column].fillna(mean)
                 logger.info(f"Cleaned {column} with mean: {mean}")
             
             # Prepare data
@@ -89,7 +93,14 @@ async def load_model():
         return None, 0
 
 # Load model when app starts
-model, accuracy = load_model()
+model, accuracy = None, 0
+
+# Check if model is loaded
+if model is None:
+    try:
+        model, accuracy = load_model()
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
 
 def main():
     # Title and description
