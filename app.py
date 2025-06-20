@@ -8,7 +8,6 @@ import os
 import urllib.request
 import logging
 import tempfile
-import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
