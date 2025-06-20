@@ -7,6 +7,7 @@ from sklearn.metrics import accuracy_score
 import os
 import urllib.request
 import logging
+import tempfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,44 +37,52 @@ st.markdown("""
 
 # Cache the model to speed up predictions
 @st.cache_resource
-def load_model():
+async def load_model():
     try:
-        # Download dataset if not exists
-        dataset_url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
-        if not os.path.exists("diabetes.csv"):
-            urllib.request.urlretrieve(dataset_url, "diabetes.csv")
+        logger.info("Starting model loading...")
         
-        # Load diabetes dataset with proper column names
-        column_names = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 
-                       'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
-        
-        # Load dataset with column names
-        df = pd.read_csv("diabetes.csv", header=None, names=column_names)
-        
-        # Clean data: replace 0 values in certain columns with NaN
-        zero_not_accepted = ['Glucose', 'BloodPressure', 'SkinThickness', 'BMI', 'Insulin']
-        for column in zero_not_accepted:
-            df[column] = df[column].replace(0, pd.NA)
-            mean = df[column].mean(skipna=True)
-            df[column] = df[column].fillna(mean)
-        
-        # Prepare data
-        X = df.drop('Outcome', axis=1)
-        y = df['Outcome']
-        
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-        # Train model
-        model = LogisticRegression(max_iter=1000, solver='lbfgs')
-        model.fit(X_train, y_train)
-        
-        # Calculate accuracy
-        y_pred = model.predict(X_test)
-        accuracy = round(accuracy_score(y_test, y_pred) * 100, 2)
-        
-        logger.info(f"Model trained successfully with accuracy: {accuracy}%")
-        return model, accuracy
+        # Download dataset to temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset_path = os.path.join(temp_dir, "diabetes.csv")
+            
+            # Download dataset
+            logger.info("Downloading dataset...")
+            dataset_url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+            urllib.request.urlretrieve(dataset_url, dataset_path)
+            
+            # Load diabetes dataset with proper column names
+            column_names = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 
+                           'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome']
+            
+            # Load dataset with column names
+            df = pd.read_csv(dataset_path, header=None, names=column_names)
+            logger.info(f"Dataset shape: {df.shape}")
+            
+            # Clean data: replace 0 values in certain columns with mean
+            zero_not_accepted = ['Glucose', 'BloodPressure', 'SkinThickness', 'BMI', 'Insulin']
+            for column in zero_not_accepted:
+                mean = df[column].replace(0, pd.NA).mean(skipna=True)
+                df[column] = df[column].replace(0, mean)
+                logger.info(f"Cleaned {column} with mean: {mean}")
+            
+            # Prepare data
+            X = df.drop('Outcome', axis=1)
+            y = df['Outcome']
+            
+            # Split data
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            
+            # Train model
+            logger.info("Training model...")
+            model = LogisticRegression(max_iter=1000, solver='lbfgs')
+            model.fit(X_train, y_train)
+            
+            # Calculate accuracy
+            y_pred = model.predict(X_test)
+            accuracy = round(accuracy_score(y_test, y_pred) * 100, 2)
+            
+            logger.info(f"Model trained successfully with accuracy: {accuracy}%")
+            return model, accuracy
     except Exception as e:
         logger.error(f"Error in load_model: {str(e)}", exc_info=True)
         st.error("Failed to load model. Please try again later.")
