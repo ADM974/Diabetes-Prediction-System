@@ -8,6 +8,7 @@ import os
 import urllib.request
 import logging
 import tempfile
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,12 +33,14 @@ st.markdown("""
         .stMarkdown {
             text-align: justify;
         }
+        .stProgress {
+            margin-bottom: 20px;
+        }
     </style>
     """, unsafe_allow_html=True)
 
 # Cache the model to speed up predictions
-@st.cache_resource
-async def load_model():
+def load_model():
     try:
         logger.info("Starting model loading...")
         
@@ -102,6 +105,7 @@ if model is None:
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
 
+# Main app function
 def main():
     # Title and description
     st.title("Diabetes Prediction System 🏥")
@@ -186,7 +190,7 @@ def main():
             )
 
         # Prediction button
-        submitted = st.form_submit_button("Predict 🔍")
+        submitted = st.form_submit_button("Predict")
 
     if submitted:
         try:
@@ -206,31 +210,33 @@ def main():
                 st.error("Model failed to load. Please try again later.")
                 return
 
-            # Make prediction
-            prediction = model.predict([data])[0]
-            probability = model.predict_proba([data])[0][1]
-            
-            # Display result
-            if prediction == 1:
-                st.error("Prediction: Diabetes Likely 🚨")
-                st.write(f"Probability: {probability:.2%}")
-                st.markdown("""
-                **Recommendations: 📝**
-                - Consult with a healthcare professional as soon as possible
-                - Consider lifestyle changes including diet and exercise
-                - Monitor blood sugar levels regularly
-                - Follow up with regular medical check-ups
-                """)
-            else:
-                st.success("Prediction: No Diabetes 👍")
-                st.write(f"Probability: {1 - probability:.2%}")
-                st.markdown("""
-                **Recommendations: 📝**
-                - Maintain a healthy lifestyle
-                - Regular medical check-ups
-                - Balanced diet and regular exercise
-                - Continue monitoring health indicators
-                """)
+            # Show loading progress
+            with st.spinner("Making prediction..."):
+                # Make prediction
+                prediction = model.predict([data])[0]
+                probability = model.predict_proba([data])[0][1]
+                
+                # Display result
+                if prediction == 1:
+                    st.error("Prediction: Diabetes Likely 🚨")
+                    st.write(f"Probability: {probability:.2%}")
+                    st.markdown("""
+                    **Recommendations: 📝**
+                    - Consult with a healthcare professional as soon as possible
+                    - Consider lifestyle changes including diet and exercise
+                    - Monitor blood sugar levels regularly
+                    - Follow up with regular medical check-ups
+                    """)
+                else:
+                    st.success("Prediction: No Diabetes 👍")
+                    st.write(f"Probability: {1 - probability:.2%}")
+                    st.markdown("""
+                    **Recommendations: 📝**
+                    - Maintain a healthy lifestyle
+                    - Regular medical check-ups
+                    - Balanced diet and regular exercise
+                    - Continue monitoring health indicators
+                    """)
 
         except Exception as e:
             logger.error(f"Error in prediction: {str(e)}", exc_info=True)
