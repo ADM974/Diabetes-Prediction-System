@@ -53,9 +53,9 @@ def load_model():
         # Clean data: replace 0 values in certain columns with NaN
         zero_not_accepted = ['Glucose', 'BloodPressure', 'SkinThickness', 'BMI', 'Insulin']
         for column in zero_not_accepted:
-            df[column] = df[column].replace(0, np.nan)
-            mean = int(df[column].mean(skipna=True))
-            df[column] = df[column].replace(np.nan, mean)
+            df[column] = df[column].replace(0, pd.NA)
+            mean = df[column].mean(skipna=True)
+            df[column] = df[column].fillna(mean)
         
         # Prepare data
         X = df.drop('Outcome', axis=1)
@@ -65,16 +65,18 @@ def load_model():
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
         # Train model
-        model = LogisticRegression(max_iter=1000)
+        model = LogisticRegression(max_iter=1000, solver='lbfgs')
         model.fit(X_train, y_train)
         
         # Calculate accuracy
         y_pred = model.predict(X_test)
         accuracy = round(accuracy_score(y_test, y_pred) * 100, 2)
         
+        logger.info(f"Model trained successfully with accuracy: {accuracy}%")
         return model, accuracy
     except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
+        logger.error(f"Error in load_model: {str(e)}", exc_info=True)
+        st.error("Failed to load model. Please try again later.")
         return None, 0
 
 # Load model when app starts
