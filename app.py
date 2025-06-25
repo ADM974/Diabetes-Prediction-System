@@ -35,6 +35,11 @@ st.markdown("""
         .stProgress {
             margin-bottom: 20px;
         }
+        .input-help {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -117,6 +122,11 @@ def main():
     1. Enter your medical information in the form below
     2. Click the "Predict" button
     3. View the prediction result and recommendations
+    
+    **About the measurements:**
+    - Skin Thickness: Measured using a caliper at the triceps area (usually by healthcare professionals)
+    - Insulin: Measured through blood tests (requires medical supervision)
+    - Diabetes Pedigree Function: A score based on family history of diabetes
     </div>
     """, unsafe_allow_html=True)
 
@@ -141,105 +151,148 @@ def main():
                 value=0,
                 help="Number of times pregnant"
             )
+            
             glucose = st.number_input(
-                "Glucose Level",
+                "Glucose Level (mg/dL)",
                 min_value=0,
                 value=100,
-                help="Plasma glucose concentration a 2 hours in an oral glucose tolerance test"
+                help="Plasma glucose concentration 2 hours after oral glucose tolerance test"
             )
-            blood_pressure = st.number_input(
-                "Blood Pressure",
+            
+            systolic = st.number_input(
+                "Systolic Blood Pressure (mm Hg)",
                 min_value=0,
-                value=70,
-                help="Diastolic blood pressure (mm Hg)"
+                value=120,
+                help="Top number of your blood pressure reading"
             )
+            
+            diastolic = st.number_input(
+                "Diastolic Blood Pressure (mm Hg)",
+                min_value=0,
+                value=80,
+                help="Bottom number of your blood pressure reading"
+            )
+            
+            # Combine systolic and diastolic into one input
+            blood_pressure = systolic
+            
+        with col2:
             skin_thickness = st.number_input(
-                "Skin Thickness",
+                "Skin Thickness (mm)",
                 min_value=0,
                 value=20,
-                help="Triceps skin fold thickness (mm)"
+                help="Triceps skin fold thickness (measured by healthcare professionals)"
             )
-
-        with col2:
+            
             insulin = st.number_input(
-                "Insulin Level",
+                "Insulin Level (mu U/ml)",
                 min_value=0,
                 value=100,
-                help="2-Hour serum insulin (mu U/ml)"
+                help="2-Hour serum insulin level (requires blood test)"
             )
+            
             bmi = st.number_input(
-                "BMI",
+                "BMI (kg/m²)",
                 min_value=0.0,
                 value=25.0,
                 step=0.1,
-                help="Body mass index (weight in kg/(height in m)^2)"
+                help="Body mass index (weight in kg/(height in m)²)"
             )
+            
             pedigree_function = st.number_input(
                 "Diabetes Pedigree Function",
                 min_value=0.0,
                 value=0.5,
                 step=0.01,
-                help="Diabetes pedigree function"
+                help="Score based on family history of diabetes"
             )
+            
             age = st.number_input(
-                "Age",
+                "Age (years)",
                 min_value=0,
                 value=30,
-                help="Age (years)"
+                help="Your current age"
             )
 
-        # Prediction button
-        submitted = st.form_submit_button("Predict")
-
-    if submitted:
-        try:
-            # Prepare data for prediction
-            data = [
-                pregnancies,
-                glucose,
-                blood_pressure,
-                skin_thickness,
-                insulin,
-                bmi,
-                pedigree_function,
-                age
-            ]
-
-            if model is None:
-                st.error("Model failed to load. Please try again later.")
-                return
-
-            # Show loading progress
-            with st.spinner("Making prediction..."):
-                # Make prediction
-                prediction = model.predict([data])[0]
-                probability = model.predict_proba([data])[0][1]
+        # Add validation
+        if st.form_submit_button("Predict"):
+            try:
+                # Validate inputs
+                if glucose < 40 or glucose > 400:
+                    st.error("Glucose level should be between 40-400 mg/dL")
+                    return
                 
-                # Display result
-                if prediction == 1:
-                    st.error("Prediction: Diabetes Likely 🚨")
-                    st.write(f"Probability: {probability:.2%}")
-                    st.markdown("""
-                    **Recommendations: 📝**
-                    - Consult with a healthcare professional as soon as possible
-                    - Consider lifestyle changes including diet and exercise
-                    - Monitor blood sugar levels regularly
-                    - Follow up with regular medical check-ups
-                    """)
-                else:
-                    st.success("Prediction: No Diabetes 👍")
-                    st.write(f"Probability: {1 - probability:.2%}")
-                    st.markdown("""
-                    **Recommendations: 📝**
-                    - Maintain a healthy lifestyle
-                    - Regular medical check-ups
-                    - Balanced diet and regular exercise
-                    - Continue monitoring health indicators
-                    """)
+                if systolic < 70 or systolic > 200:
+                    st.error("Systolic blood pressure should be between 70-200 mm Hg")
+                    return
+                
+                if diastolic < 40 or diastolic > 120:
+                    st.error("Diastolic blood pressure should be between 40-120 mm Hg")
+                    return
+                
+                if skin_thickness < 0 or skin_thickness > 100:
+                    st.error("Skin thickness should be between 0-100 mm")
+                    return
+                
+                if insulin < 0 or insulin > 800:
+                    st.error("Insulin level should be between 0-800 mu U/ml")
+                    return
+                
+                if bmi < 10 or bmi > 60:
+                    st.error("BMI should be between 10-60 kg/m²")
+                    return
+                
+                if age < 0 or age > 120:
+                    st.error("Age should be between 0-120 years")
+                    return
 
-        except Exception as e:
-            logger.error(f"Error in prediction: {str(e)}", exc_info=True)
-            st.error("Failed to make prediction. Please try again later.")
+                # Prepare data for prediction
+                data = [
+                    pregnancies,
+                    glucose,
+                    blood_pressure,  # Using systolic as the main BP value
+                    skin_thickness,
+                    insulin,
+                    bmi,
+                    pedigree_function,
+                    age
+                ]
+
+                if model is None:
+                    st.error("Model failed to load. Please try again later.")
+                    return
+
+                # Show loading progress
+                with st.spinner("Making prediction..."):
+                    # Make prediction
+                    prediction = model.predict([data])[0]
+                    probability = model.predict_proba([data])[0][1]
+                    
+                    # Display result
+                    if prediction == 1:
+                        st.error("Prediction: Diabetes Likely 🚨")
+                        st.write(f"Probability: {probability:.2%}")
+                        st.markdown("""
+                        **Recommendations: 📝**
+                        - Consult with a healthcare professional as soon as possible
+                        - Consider lifestyle changes including diet and exercise
+                        - Monitor blood sugar levels regularly
+                        - Follow up with regular medical check-ups
+                        """)
+                    else:
+                        st.success("Prediction: No Diabetes 👍")
+                        st.write(f"Probability: {1 - probability:.2%}")
+                        st.markdown("""
+                        **Recommendations: 📝**
+                        - Maintain a healthy lifestyle
+                        - Regular medical check-ups
+                        - Balanced diet and regular exercise
+                        - Continue monitoring health indicators
+                        """)
+
+            except Exception as e:
+                logger.error(f"Error in prediction: {str(e)}", exc_info=True)
+                st.error("Failed to make prediction. Please try again later.")
 
 if __name__ == "__main__":
     main()
