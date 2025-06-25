@@ -273,7 +273,7 @@ def main():
                         st.error("Prediction: Diabetes Likely 🚨")
                         st.write(f"Probability: {probability:.2%}")
                         st.markdown("""
-                        **Recommendations: 📝**
+                        **Recommendations:** 
                         - Consult with a healthcare professional as soon as possible
                         - Consider lifestyle changes including diet and exercise
                         - Monitor blood sugar levels regularly
@@ -283,7 +283,7 @@ def main():
                         st.success("Prediction: No Diabetes 👍")
                         st.write(f"Probability: {1 - probability:.2%}")
                         st.markdown("""
-                        **Recommendations: 📝**
+                        **Recommendations:** 
                         - Maintain a healthy lifestyle
                         - Regular medical check-ups
                         - Balanced diet and regular exercise
@@ -296,4 +296,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-I've made several important
